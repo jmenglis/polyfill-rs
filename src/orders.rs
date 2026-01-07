@@ -303,6 +303,12 @@ impl OrderBuilder {
         let exchange_address = Address::from_str(&contract_config.exchange)
             .map_err(|e| PolyfillError::config(format!("Invalid exchange address: {}", e)))?;
 
+        // Merge fee_rate_bps from options into extras if provided
+        let mut merged_extras = extras.clone();
+        if let Some(fee_rate) = options.fee_rate_bps {
+            merged_extras.fee_rate_bps = fee_rate;
+        }
+
         self.build_signed_order(
             order_args.token_id.clone(),
             order_args.side,
@@ -311,7 +317,7 @@ impl OrderBuilder {
             maker_amount,
             taker_amount,
             expiration,
-            extras,
+            &merged_extras,
         )
     }
 
