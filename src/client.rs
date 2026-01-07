@@ -9,7 +9,7 @@ use crate::http_config::{
     create_colocated_client, create_internet_client, create_optimized_client, prewarm_connections,
 };
 use crate::types::{OrderOptions, PostOrder, SignedOrderRequest};
-use alloy_primitives::U256;
+use alloy_primitives::{Address, U256};
 use alloy_signer_local::PrivateKeySigner;
 use reqwest::header::HeaderName;
 use reqwest::Client;
@@ -189,6 +189,57 @@ impl ClobClient {
             .expect("Invalid private key");
 
         let order_builder = crate::orders::OrderBuilder::new(signer.clone(), None, None);
+
+        let http_client = create_optimized_client().unwrap_or_else(|_| Client::new());
+
+        // Initialize infrastructure modules
+        let dns_cache = None; // Skip DNS cache for simplicity in this constructor
+        let connection_manager = Some(std::sync::Arc::new(
+            crate::connection_manager::ConnectionManager::new(
+                http_client.clone(),
+                host.to_string(),
+            ),
+        ));
+        let buffer_pool = std::sync::Arc::new(crate::buffer_pool::BufferPool::new(512 * 1024, 10));
+
+        Self {
+            http_client,
+            base_url: host.to_string(),
+            chain_id,
+            signer: Some(signer),
+            api_creds: None,
+            order_builder: Some(order_builder),
+            dns_cache,
+            connection_manager,
+            buffer_pool,
+        }
+    }
+
+    /// Create a client with proxy wallet support (for Polymarket proxy wallets)
+    ///
+    /// This is the recommended constructor for users who have set up a Polymarket
+    /// proxy wallet. The proxy wallet is used as the funder address for orders,
+    /// and the signature type is set to `PolyProxy` (1).
+    ///
+    /// # Arguments
+    /// * `host` - The CLOB API host URL
+    /// * `private_key` - The private key of the EOA that owns the proxy wallet
+    /// * `chain_id` - The chain ID (137 for Polygon)
+    /// * `proxy_address` - The Polymarket proxy wallet address (funder)
+    pub fn with_proxy(host: &str, private_key: &str, chain_id: u64, proxy_address: &str) -> Self {
+        let signer = private_key
+            .parse::<PrivateKeySigner>()
+            .expect("Invalid private key");
+
+        let funder = proxy_address
+            .parse::<Address>()
+            .expect("Invalid proxy address");
+
+        let order_builder = crate::orders::OrderBuilder::new(
+            signer.clone(),
+            Some(crate::orders::SigType::PolyProxy),
+            Some(funder),
+        );
 
         let http_client = create_optimized_client().unwrap_or_else(|_| Client::new());
 
@@ -1117,15 +1168,16 @@ impl ClobClient {
 
         let mut params = params.unwrap_or_default();
         if params.signature_type.is_none() {
-            params.set_signature_type(
-                self.order_builder
-                    .as_ref()
-                    .expect("OrderBuilder not set")
-                    .get_sig_type(),
-            );
+            let sig_type = self.order_builder
+                .as_ref()
+                .expect("OrderBuilder not set")
+                .get_sig_type();
+            tracing::debug!("Setting signature_type to {} for balance query", sig_type);
+            params.set_signature_type(sig_type);
         }
 
         let query_params = params.to_query_params();
+        tracing::debug!("Balance query params: {:?}", query_params);
 
         let method = Method::GET;
         let endpoint = "/balance-allowance";

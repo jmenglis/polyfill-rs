@@ -141,6 +141,9 @@ pub use crate::client::OrderArgs;
 // Re-export error types
 pub use crate::errors::{PolyfillError, Result};
 
+// Re-export order types (including SigType for proxy wallet support)
+pub use crate::orders::SigType;
+
 // Re-export advanced components
 pub use crate::book::{OrderBook as OrderBookImpl, OrderBookManager};
 pub use crate::decode::Decoder;

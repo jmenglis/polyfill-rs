@@ -1,3 +1,5 @@
+[workspace]
+
 [package]
 name = "polyfill-rs"
 version = "0.2.3"
