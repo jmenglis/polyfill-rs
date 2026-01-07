@@ -112,6 +112,7 @@ pub use crate::types::{
     OrderBook,
     OrderBookSummary,
     OrderDelta,
+    OrderOptions,  // For fee rate support
     OrderRequest,
     OrderStatus,
     OrderSummary,
