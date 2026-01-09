@@ -309,6 +309,27 @@ impl ClobClient {
         self.api_creds = Some(api_creds);
     }
 
+    /// Get L2 auth headers for a specific endpoint.
+    /// Returns headers as HashMap of (header_name, header_value) pairs.
+    /// Useful for making authenticated requests outside of polyfill-rs.
+    pub fn get_l2_headers_for_endpoint(
+        &self,
+        method: &str,
+        endpoint: &str,
+    ) -> Result<std::collections::HashMap<&'static str, String>> {
+        let signer = self
+            .signer
+            .as_ref()
+            .ok_or_else(|| PolyfillError::auth("Signer not set"))?;
+        let api_creds = self
+            .api_creds
+            .as_ref()
+            .ok_or_else(|| PolyfillError::auth("API credentials not set"))?;
+
+        let headers = create_l2_headers::<serde_json::Value>(signer, api_creds, method, endpoint, None)?;
+        Ok(headers)
+    }
+
     /// Start background keep-alive to maintain warm connection
     /// Sends periodic lightweight requests to prevent connection drops
     pub async fn start_keepalive(&self, interval: std::time::Duration) {
