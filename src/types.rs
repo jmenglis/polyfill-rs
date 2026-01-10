@@ -564,6 +564,20 @@ impl PostOrder {
     }
 }
 
+/// Post orders args for batch order submission
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PostOrdersArgs {
+    pub order: SignedOrderRequest,
+    pub order_type: OrderType,
+}
+
+impl PostOrdersArgs {
+    pub fn new(order: SignedOrderRequest, order_type: OrderType) -> Self {
+        Self { order, order_type }
+    }
+}
+
 /// Market information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Market {

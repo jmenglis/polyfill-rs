@@ -117,9 +117,11 @@ pub use crate::types::{
     OrderStatus,
     OrderSummary,
     OrderType,
+    PostOrdersArgs,  // For batch order submission
     PriceResponse,
     Rewards,
     Side,
+    SignedOrderRequest,  // For creating signed orders
     SimplifiedMarket,
     SimplifiedMarketsResponse,
     SpreadResponse,
