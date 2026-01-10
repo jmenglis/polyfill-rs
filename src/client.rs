@@ -935,7 +935,13 @@ impl ClobClient {
     }
 
     /// Post multiple orders to the exchange in a single batch request
-    pub async fn post_orders(&self, orders: Vec<crate::types::PostOrdersArgs>) -> Result<Value> {
+    ///
+    /// Takes a vector of (SignedOrderRequest, OrderType) pairs and constructs the
+    /// batch request with the proper owner (api_key) for each order.
+    pub async fn post_orders(
+        &self,
+        orders: Vec<(crate::types::SignedOrderRequest, crate::types::OrderType)>,
+    ) -> Result<Value> {
         let signer = self
             .signer
             .as_ref()
@@ -945,10 +951,18 @@ impl ClobClient {
             .as_ref()
             .ok_or_else(|| PolyfillError::auth("API credentials not set"))?;
 
-        let headers = create_l2_headers(signer, api_creds, "POST", "/orders", Some(&orders))?;
+        // Construct PostOrdersArgs with owner (api_key) for each order
+        let post_orders_args: Vec<crate::types::PostOrdersArgs> = orders
+            .into_iter()
+            .map(|(order, order_type)| {
+                crate::types::PostOrdersArgs::new(order, api_creds.api_key.clone(), order_type)
+            })
+            .collect();
+
+        let headers = create_l2_headers(signer, api_creds, "POST", "/orders", Some(&post_orders_args))?;
         let req = self.create_request_with_headers(Method::POST, "/orders", headers.into_iter());
 
-        let response = req.json(&orders).send().await?;
+        let response = req.json(&post_orders_args).send().await?;
         if !response.status().is_success() {
             let status = response.status().as_u16();
             let error_body = response.text().await.unwrap_or_else(|_| "No response body".to_string());

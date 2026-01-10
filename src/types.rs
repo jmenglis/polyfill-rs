@@ -569,12 +569,13 @@ impl PostOrder {
 #[serde(rename_all = "camelCase")]
 pub struct PostOrdersArgs {
     pub order: SignedOrderRequest,
+    pub owner: String,
     pub order_type: OrderType,
 }
 
 impl PostOrdersArgs {
-    pub fn new(order: SignedOrderRequest, order_type: OrderType) -> Self {
-        Self { order, order_type }
+    pub fn new(order: SignedOrderRequest, owner: String, order_type: OrderType) -> Self {
+        Self { order, owner, order_type }
     }
 }
 
